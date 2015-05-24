@@ -15,6 +15,7 @@
 namespace Cake\Controller\Component;
 
 use Cake\Controller\Component;
+use Cake\Datasource\RepositoryInterface;
 use Cake\Network\Exception\NotFoundException;
 use Cake\ORM\Query;
 use Cake\ORM\Table;
@@ -161,7 +162,7 @@ class PaginatorComponent extends Component
         list($finder, $options) = $this->_extractFinder($options);
 
         if (empty($query)) {
-            $query = $object->find($finder, $options);
+            $query = $this->_buildFinderQuery($object, $finder, $options);
         } else {
             $query->applyOptions($options);
         }
@@ -188,7 +189,7 @@ class PaginatorComponent extends Component
         }
 
         $paging = [
-            'finder' => $finder,
+            'finder' => array_keys($finder),
             'page' => $page,
             'current' => $numResults,
             'count' => $count,
@@ -224,15 +225,27 @@ class PaginatorComponent extends Component
      */
     protected function _extractFinder($options)
     {
-        $type = !empty($options['finder']) ? $options['finder'] : 'all';
+        $finder = !empty($options['finder']) ? $options['finder'] : 'all';
         unset($options['finder'], $options['maxLimit']);
+        $finder = \Cake\Utility\Hash::normalize((array)$finder);
+        return [$finder, $options];
+    }
 
-        if (is_array($type)) {
-            $options = (array)current($type) + $options;
-            $type = key($type);
+    /**
+     * Builds a chained finder query
+     *
+     * @param \Cake\Datasource\RepositoryInterface| $repository Table to query on
+     * @param array $finder List of finders and associated options
+     * @param array $options Additional query options
+     * @return Query
+     */
+    protected function _buildFinderQuery(RepositoryInterface $repository, array $finder, array $options)
+    {
+        $query = $repository;
+        foreach ($finder as $type => $finderOptions) {
+            $query = $query->find($type, (array)$finderOptions + $options);
         }
-
-        return [$type, $options];
+        return $query;
     }
 
     /**

@@ -197,7 +197,7 @@ class PaginatorComponentTest extends TestCase
             ->will($this->returnValue($query));
 
         $this->Paginator->paginate($table, $settings);
-        $this->assertEquals('popular', $this->request->params['paging']['PaginatorPosts']['finder']);
+        $this->assertEquals(['popular'], $this->request->params['paging']['PaginatorPosts']['finder']);
     }
 
     /**
@@ -908,6 +908,37 @@ class PaginatorComponentTest extends TestCase
                 'whitelist' => ['limit', 'sort', 'page', 'direction'],
             ]);
         $this->Paginator->paginate($query, $settings);
+    }
+
+    /**
+     * Test chained finder options
+     *
+     * @return void
+     */
+    public function testChainedFinder()
+    {
+        $settings = [
+            'PaginatorPosts' => [
+                'finder' => [
+                    'popular',
+                    'author',
+                ],
+            ]
+        ];
+
+        $table = $this->_getMockPosts(['findPopular', 'findAuthor']);
+        $query = $this->_getMockFindQuery($table);
+
+        $table->expects($this->once())
+            ->method('findPopular')
+            ->will($this->returnValue($query));
+
+        $table->expects($this->once())
+            ->method('findAuthor')
+            ->will($this->returnValue($query));
+
+        $this->Paginator->paginate($table, $settings);
+        $this->assertEquals(['popular', 'author'], $this->request->params['paging']['PaginatorPosts']['finder']);
     }
 
     /**
